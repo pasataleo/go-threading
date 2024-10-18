@@ -1,6 +1,7 @@
 package threading
 
 import (
+	"context"
 	"reflect"
 	"sync"
 
@@ -104,12 +105,12 @@ func (pool *ThreadPool) enqueue() {
 }
 
 // run schedules the given function to run in the thread pool.
-func (pool *ThreadPool) run(future *futureImpl, fn reflect.Value, cb func([]reflect.Value)) {
+func (pool *ThreadPool) run(ctx context.Context, future *futureImpl, fn reflect.Value, cb func([]reflect.Value)) {
 	future.wg.Add(1)
 
 	f := &function{
 		f: func() {
-			results := fn.Call(nil)
+			results := fn.Call([]reflect.Value{reflect.ValueOf(ctx)})
 			cb(results)
 
 			// mark the actual future as finished and decrement the wait group.
@@ -133,7 +134,7 @@ func (pool *ThreadPool) run(future *futureImpl, fn reflect.Value, cb func([]refl
 }
 
 // Run runs the given function in the given thread pool.
-func Run(pool *ThreadPool, f func()) (Future, error) {
+func Run(ctx context.Context, pool *ThreadPool, f func(ctx context.Context)) (Future, error) {
 	pool.mutex.Lock()
 	defer pool.mutex.Unlock()
 
@@ -147,12 +148,12 @@ func Run(pool *ThreadPool, f func()) (Future, error) {
 			wg: new(sync.WaitGroup),
 		},
 	}
-	pool.run(future.futureImpl, reflect.ValueOf(f), func([]reflect.Value) {})
+	pool.run(ctx, future.futureImpl, reflect.ValueOf(f), func([]reflect.Value) {})
 
 	return future, nil
 }
 
-func RunE(pool *ThreadPool, f func() error) (FutureE, error) {
+func RunE(ctx context.Context, pool *ThreadPool, f func() error) (FutureE, error) {
 	pool.mutex.Lock()
 	defer pool.mutex.Unlock()
 
@@ -165,14 +166,16 @@ func RunE(pool *ThreadPool, f func() error) (FutureE, error) {
 			wg: new(sync.WaitGroup),
 		},
 	}
-	pool.run(future.futureImpl, reflect.ValueOf(f), func(values []reflect.Value) {
-		future.err = values[0].Interface().(error)
+	pool.run(ctx, future.futureImpl, reflect.ValueOf(f), func(values []reflect.Value) {
+		if values[0].Interface() != nil {
+			future.err = values[0].Interface().(error)
+		}
 	})
 
 	return future, nil
 }
 
-func RunV[V any](pool *ThreadPool, f func() V) (FutureV[V], error) {
+func RunV[V any](ctx context.Context, pool *ThreadPool, f func() V) (FutureV[V], error) {
 	pool.mutex.Lock()
 	defer pool.mutex.Unlock()
 
@@ -185,14 +188,14 @@ func RunV[V any](pool *ThreadPool, f func() V) (FutureV[V], error) {
 			wg: new(sync.WaitGroup),
 		},
 	}
-	pool.run(future.futureImpl, reflect.ValueOf(f), func(values []reflect.Value) {
+	pool.run(ctx, future.futureImpl, reflect.ValueOf(f), func(values []reflect.Value) {
 		future.value = values[0].Interface().(V)
 	})
 
 	return future, nil
 }
 
-func RunEV[V any](pool *ThreadPool, f func() (V, error)) (FutureEV[V], error) {
+func RunEV[V any](ctx context.Context, pool *ThreadPool, f func() (V, error)) (FutureEV[V], error) {
 	pool.mutex.Lock()
 	defer pool.mutex.Unlock()
 
@@ -205,9 +208,11 @@ func RunEV[V any](pool *ThreadPool, f func() (V, error)) (FutureEV[V], error) {
 			wg: new(sync.WaitGroup),
 		},
 	}
-	pool.run(future.futureImpl, reflect.ValueOf(f), func(values []reflect.Value) {
+	pool.run(ctx, future.futureImpl, reflect.ValueOf(f), func(values []reflect.Value) {
 		future.value = values[0].Interface().(V)
-		future.err = values[1].Interface().(error)
+		if values[1].Interface() != nil {
+			future.err = values[1].Interface().(error)
+		}
 	})
 
 	return future, nil

@@ -1,6 +1,7 @@
 package threading
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -14,7 +15,7 @@ var (
 
 func TestImmediateFuture(t *testing.T) {
 	data := 0
-	f := ImmediateFuture(func() {
+	f := ImmediateFuture(context.Background(), func(ctx context.Context) {
 		time.Sleep(wait)
 		data = 1
 	})
@@ -24,7 +25,7 @@ func TestImmediateFuture(t *testing.T) {
 }
 
 func TestImmediateFutureV(t *testing.T) {
-	f := ImmediateFutureV(func() int {
+	f := ImmediateFutureV(context.Background(), func(ctx context.Context) int {
 		time.Sleep(wait)
 		return 1
 	})
@@ -32,7 +33,7 @@ func TestImmediateFutureV(t *testing.T) {
 }
 
 func TestImmediateFutureE(t *testing.T) {
-	f := ImmediateFutureE(func() error {
+	f := ImmediateFutureE(context.Background(), func(ctx context.Context) error {
 		time.Sleep(wait)
 		return nil
 	})
@@ -40,7 +41,7 @@ func TestImmediateFutureE(t *testing.T) {
 }
 
 func TestImmediateFutureE_errors(t *testing.T) {
-	f := ImmediateFutureE(func() error {
+	f := ImmediateFutureE(context.Background(), func(ctx context.Context) error {
 		time.Sleep(wait)
 		return errors.New(nil, errors.ErrorCodeUnknown, "error")
 	})
@@ -48,7 +49,7 @@ func TestImmediateFutureE_errors(t *testing.T) {
 }
 
 func TestImmediateFutureEV(t *testing.T) {
-	f := ImmediateFutureEV(func() (int, error) {
+	f := ImmediateFutureEV(context.Background(), func(ctx context.Context) (int, error) {
 		time.Sleep(wait)
 		return 1, nil
 	})
@@ -56,7 +57,7 @@ func TestImmediateFutureEV(t *testing.T) {
 }
 
 func TestImmediateFutureEV_errors(t *testing.T) {
-	f := ImmediateFutureEV(func() (int, error) {
+	f := ImmediateFutureEV(context.Background(), func(ctx context.Context) (int, error) {
 		time.Sleep(wait)
 		return 0, errors.New(nil, errors.ErrorCodeUnknown, "error")
 	})

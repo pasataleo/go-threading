@@ -1,6 +1,7 @@
 package threading
 
 import (
+	"context"
 	"reflect"
 	"sync"
 )
@@ -20,11 +21,11 @@ type futureImpl struct {
 // The callback is called with the results of the function when the function is finished.
 //
 // This function should be called by whatever creates the future. Only of immediate or pool should be called.
-func (f *futureImpl) immediate(fn reflect.Value, cb func([]reflect.Value)) {
+func (f *futureImpl) immediate(ctx context.Context, fn reflect.Value, cb func([]reflect.Value)) {
 	f.wg.Add(1) // this ensures that the future is not finished until the function is done.
 
 	go func() {
-		results := fn.Call(nil)
+		results := fn.Call([]reflect.Value{reflect.ValueOf(ctx)})
 		cb(results)
 
 		f.finished = true

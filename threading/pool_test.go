@@ -1,6 +1,7 @@
 package threading
 
 import (
+	"context"
 	"sync"
 	"testing"
 	"time"
@@ -12,7 +13,7 @@ func TestThreadPool(t *testing.T) {
 	pool := NewThreadPool(1)
 
 	data := 0
-	tests.Execute2E(Run(pool, func() {
+	tests.Execute2E(Run(context.Background(), pool, func(ctx context.Context) {
 		data = 1
 	})).NoError(t)
 
@@ -26,8 +27,8 @@ func TestThreadPool_multi(t *testing.T) {
 
 	mutex := new(sync.Mutex)
 	keys := make(map[int]bool)
-	fn := func(key int) func() {
-		return func() {
+	fn := func(key int) func(ctx context.Context) {
+		return func(ctx context.Context) {
 			t.Logf("starting %d", key)
 			time.Sleep(wait)
 
@@ -40,7 +41,7 @@ func TestThreadPool_multi(t *testing.T) {
 	}
 
 	for ix := 0; ix < 10; ix++ {
-		tests.Execute2E(Run(pool, fn(ix))).NoError(t)
+		tests.Execute2E(Run(context.Background(), pool, fn(ix))).NoError(t)
 	}
 	pool.Close()
 
